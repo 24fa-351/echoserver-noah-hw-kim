@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
@@ -12,7 +11,8 @@
 #define LISTEN_BACKLOG 5
 #define BUFFER_SIZE 1024
 
-int handleConnection(int a_client) {
+void* handleConnection(void *a_client) {
+    int client_id = *(int *)a_client;
     char buffer[BUFFER_SIZE];
     memset(buffer, 0, sizeof(buffer));
     int bytes_read = read(a_client, buffer, sizeof(buffer));
@@ -23,7 +23,7 @@ int handleConnection(int a_client) {
     int res = strncmp("exit", buffer, 4);
     printf("res: %d\n", res);
 
-    return res;
+    return a_client;
 }
 
 int main(int argc, char* argv[]) {
@@ -63,12 +63,18 @@ int main(int argc, char* argv[]) {
         }
 
         // printf("Connected: %s:%d, file descriptor: %d\n", inet_ntoa(client_address.sin_addr), ntohs(client_address.sin_port), client_fd);
-        while (1) {
-            if (handleConnection(client_fd) == 0) {
-                break;
-            }
-        }
-        close(client_fd);
+
+        pthread_t child_tid;
+        if (pthread_create(&child_tid, NULL, handleConnection, &client_fd) == 0)
+            pthread_detach(child_tid);
+        else
+            perror("Thread create failed");
+        // while (1) {
+        //     if (handleConnection(client_fd) == 0) {
+        //         break;
+        //     }
+        // }
+        // close(client_fd);
     }
     close(server_fd);
     
