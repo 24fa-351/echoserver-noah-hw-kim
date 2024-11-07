@@ -76,7 +76,10 @@ int main(int argc, char *argv[])
 
         printf("accepted connection on %d\n", *client_fd_buf);
 
-        pthread_create(&thread, NULL, (void* (*) (void*)) handleConnection, (void*) client_fd_buf);
+        while (1) {
+            pthread_create(&thread, NULL, (void* (*) (void*)) handleConnection, (void*) client_fd_buf);
+            pthread_detach(thread);
+        }
 
         // handleConnection(client_fd);
         // close(*client_fd_buf);
