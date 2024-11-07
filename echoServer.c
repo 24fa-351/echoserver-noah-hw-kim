@@ -11,20 +11,22 @@
 #define LISTEN_BACKLOG 5
 #define BUFFER_SIZE 1024
 
-void *handleConnection(int *a_client)
+// input pointer is freed by this function
+void handleConnection(int *client_fd_ptr)
 {
-    int socket_fd = *(int *)a_client;
-    printf("conneted to %d\n", socket_fd);
+    int socket_fd = *client_fd_ptr;
+    free(client_fd_ptr);
 
+    printf("Handling connection on %d\n", socket_fd);
     char buffer[BUFFER_SIZE];
-    memset(buffer, 0, sizeof(buffer));
     int bytes_read = read(socket_fd, buffer, sizeof(buffer));
     printf("Received: %s\n", buffer);
     write(socket_fd, buffer, bytes_read);
-    int res = strncmp("exit", buffer, 4);
-    printf("res: %d\n", res);
 
-    printf("done with %d\n", socket_fd);
+    // int res = strncmp("exit", buffer, 4);
+    // printf("res: %d\n", res);
+
+    printf("done with connection %d\n", socket_fd);
 
     // return res;
 }
@@ -62,21 +64,22 @@ int main(int argc, char *argv[])
 
     while (1)
     {
-        int client_fd;
         pthread_t thread;
+        int* client_fd_buf = malloc(sizeof(int));
 
-        client_fd = accept(server_fd, (struct sockaddr *)&client_address, &client_address_len);
-        int *client_fd_ptr = &client_fd;
-        if (client_fd < 0)
+        *client_fd_buf = accept(server_fd, (struct sockaddr *)&client_address, &client_address_len);
+        if (*client_fd_buf < 0)
         {
             perror("Accept failed");
             continue;
         }
 
-        pthread_create(&thread, NULL, (void *)handleConnection, client_fd_ptr);
+        printf("accepted connection on %d\n", *client_fd_buf);
+
+        pthread_create(&thread, NULL, (void* (*) (void*)) handleConnection, (void*) client_fd_buf);
 
         // handleConnection(client_fd);
-        close(client_fd);
+        // close(*client_fd_buf);
     }
     close(server_fd);
 
