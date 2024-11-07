@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
@@ -12,30 +11,36 @@
 #define LISTEN_BACKLOG 5
 #define BUFFER_SIZE 1024
 
-int handleConnection(int a_client) {
+void *handleConnection(int *a_client)
+{
+    int socket_fd = *(int *)a_client;
+    printf("conneted to %d\n", socket_fd);
+
     char buffer[BUFFER_SIZE];
     memset(buffer, 0, sizeof(buffer));
-    int bytes_read = read(a_client, buffer, sizeof(buffer));
-
+    int bytes_read = read(socket_fd, buffer, sizeof(buffer));
     printf("Received: %s\n", buffer);
-    write(a_client, buffer, bytes_read);
-
+    write(socket_fd, buffer, bytes_read);
     int res = strncmp("exit", buffer, 4);
     printf("res: %d\n", res);
 
-    return res;
+    printf("done with %d\n", socket_fd);
+
+    // return res;
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[])
+{
     int port = DEFAULT_PORT;
-    
-    if (argc > 2 && strcmp(argv[1], "-p") == 0) {
+
+    if (argc > 2 && strcmp(argv[1], "-p") == 0)
+    {
         port = atoi(argv[2]);
     }
-    
+
     // create socket
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
-    
+
     // set up server address
     struct sockaddr_in server_address;
     memset(&server_address, '\0', sizeof(server_address));
@@ -45,7 +50,7 @@ int main(int argc, char* argv[]) {
 
     int returnVal;
     // bind socket to server address
-    returnVal = bind(server_fd, (struct sockaddr*)&server_address, sizeof(server_address));
+    returnVal = bind(server_fd, (struct sockaddr *)&server_address, sizeof(server_address));
     // listen for connetions
     returnVal = listen(server_fd, LISTEN_BACKLOG);
 
@@ -55,22 +60,25 @@ int main(int argc, char* argv[]) {
     struct sockaddr_in client_address;
     socklen_t client_address_len = sizeof(client_address);
 
-    while (1) {
-        int client_fd = accept(server_fd, (struct sockaddr*)&client_address, &client_address_len);
-        if (client_fd < 0) {
+    while (1)
+    {
+        int client_fd;
+        pthread_t thread;
+
+        client_fd = accept(server_fd, (struct sockaddr *)&client_address, &client_address_len);
+        int *client_fd_ptr = &client_fd;
+        if (client_fd < 0)
+        {
             perror("Accept failed");
             continue;
         }
 
-        // printf("Connected: %s:%d, file descriptor: %d\n", inet_ntoa(client_address.sin_addr), ntohs(client_address.sin_port), client_fd);
-        while (1) {
-            if (handleConnection(client_fd) == 0) {
-                break;
-            }
-        }
+        pthread_create(&thread, NULL, (void *)handleConnection, client_fd_ptr);
+
+        // handleConnection(client_fd);
         close(client_fd);
     }
     close(server_fd);
-    
+
     return 0;
 }
