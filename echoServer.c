@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
     while (1)
     {
         pthread_t thread;
-        int* client_fd_buf = malloc(sizeof(int));
+        int *client_fd_buf = malloc(sizeof(int));
 
         *client_fd_buf = accept(server_fd, (struct sockaddr *)&client_address, &client_address_len);
         if (*client_fd_buf < 0)
@@ -76,8 +76,9 @@ int main(int argc, char *argv[])
 
         printf("accepted connection on %d\n", *client_fd_buf);
 
-        while (1) {
-            pthread_create(&thread, NULL, (void* (*) (void*)) handleConnection, (void*) client_fd_buf);
+        while (1)
+        {
+            pthread_create(&thread, NULL, (void *(*)(void *))handleConnection, (void *)client_fd_buf);
             pthread_detach(thread);
         }
 
